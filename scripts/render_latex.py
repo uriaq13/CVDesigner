@@ -55,7 +55,8 @@ def render(profile: dict[str, Any]) -> str:
     for item in profile.get("experience", []):
         title = ", ".join(str(item.get(key)) for key in ("title", "employer", "location") if item.get(key))
         dates = latex(item.get("dates", ""))
-        bullets = [r"\item " + latex(bullet) for bullet in item.get("bullets", []) if bullet]
+        bullet_values = item.get("bullets") or item.get("responsibilities", [])
+        bullets = [r"\item " + latex(bullet) for bullet in bullet_values if bullet]
         if title:
             line = r"\textbf{" + latex(title) + "}"
             if dates:
@@ -65,14 +66,16 @@ def render(profile: dict[str, Any]) -> str:
 
     education = []
     for item in profile.get("education", []):
-        line = ", ".join(str(item.get(key)) for key in ("degree", "institution") if item.get(key))
+        degree = item.get("degree") or item.get("program")
+        line = ", ".join(str(value) for value in (degree, item.get("institution")) if value)
         if line:
             education_line = r"\textbf{" + latex(line) + "}"
             if item.get("dates"):
                 education_line += r"\hfill \textit{" + latex(item["dates"]) + "}"
             education.append(education_line)
-        if item.get("details"):
-            education.append(latex(item["details"]))
+        details = item.get("details") or item.get("focus")
+        if details:
+            education.append(latex(details))
     sections.append(render_section("Education", education))
 
     skills = []
@@ -83,7 +86,8 @@ def render(profile: dict[str, Any]) -> str:
 
     projects = []
     for item in profile.get("projects", []):
-        line = ": ".join(str(item.get(key)) for key in ("name", "result") if item.get(key))
+        description = item.get("result") or item.get("contribution")
+        line = ": ".join(str(value) for value in (item.get("name"), description) if value)
         if line:
             projects.append(r"\textbf{" + latex(line) + "}")
     sections.append(render_section("Projects", projects))

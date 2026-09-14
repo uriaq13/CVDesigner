@@ -11,6 +11,7 @@ This skill is a staged workflow. Do not skip a gate and do not infer facts about
 
 - Treat `data/profile.json` as the only source of candidate facts.
 - Treat `data/job-description.json` as the only source of job-post facts.
+- Read the current contents of both source files before changing either one; they may have been edited outside the current conversation.
 - Never use an attached CV, an older draft, a web profile, or a plausible assumption as profile data unless the user explicitly asks to import it and confirms the imported fields.
 - Preserve uncertainty with `unknown`, `needs_confirmation`, or an empty value. Do not turn missing information into a claim.
 - Do not generate a CV, cover letter, or interview package during intake.
@@ -29,6 +30,7 @@ Stop after asking this question if the answer is not available.
 
 Once direction is known, ask for the following in one structured intake. The user may answer in multiple messages:
 
+- Contact information required for the CV: full name, professional email, phone number, and current city/country. Ask for each field explicitly; do not assume a name from an account, file path, attachment, or previous document.
 - Education or equivalent background: institution, program, dates, focus, relevant coursework.
 - Professional experience: employer, title, location, dates, responsibilities, outcomes, tools, and measurable impact.
 - Projects: optional; context, contribution, technologies, result, and links.
@@ -47,7 +49,9 @@ Then propose these additional questions before saving the completed profile:
 - Which interview formats are expected: behavioral, technical, case, portfolio, or panel?
 - What tone and countries' conventions should the application follow?
 
-Ask the user to answer what applies and explicitly allow them to say `skip` or `unknown`. Store the answers with `python scripts/profile_store.py validate --file data/profile.json` after the user confirms the profile. Do not create candidate data on the user's behalf.
+Ask the user to answer what applies and explicitly allow them to say `skip` or `unknown`. Before saving the profile, repeat the captured contact fields and ask the user to confirm them. Name, email, and phone are necessary for a complete CV profile; if the user says `unknown` or `skip`, preserve that value and mark the profile as incomplete rather than inventing a value. Store the answers with `python scripts/profile_store.py validate --file data/profile.json` after the user confirms the profile. Do not create candidate data on the user's behalf.
+
+When the user answers `skip`, close that question as intentionally omitted and do not ask it again in the same application workflow. Keep the corresponding field empty or marked `unknown`, and do not include the omitted claim in application materials.
 
 ## Stage 3: wait state
 
@@ -66,6 +70,8 @@ python scripts/job_description.py ingest --text "<JOB_DESCRIPTION_TEXT>" --outpu
 
 Use only one input mode. For long pasted text, a file is usually easier to review.
 
+After ingestion, inspect the stored text. Job-board URLs, especially LinkedIn, may return HTML containing navigation, sign-in text, and the actual posting mixed together. Extract and review the visible posting content before analysis. If the role, responsibilities, and requirements cannot be recovered reliably, ask the user for the full description or a local file instead of inferring requirements from the URL.
+
 ## Stage 4: evidence-first analysis
 
 After receiving the job description:
@@ -76,6 +82,8 @@ After receiving the job description:
 4. Ask focused questions for every material `missing` or `unclear` item and for any metric, date, scope, or ownership needed to make a claim accurate.
 5. Do not fill gaps with generic claims, inferred seniority, invented metrics, or guessed technologies.
 
+When the user answers clarification questions, update `data/profile.json` with only the confirmed facts and update the draft so answered questions are removed or marked resolved. Explicit `skip` answers are omissions, not evidence and not blockers for the remaining confirmed material.
+
 The first draft may be saved as `data/application-draft.md`, but it must clearly label unsupported items as questions or omissions.
 
 ## Stage 5: final materials
@@ -83,9 +91,12 @@ The first draft may be saved as `data/application-draft.md`, but it must clearly
 Only after the user answers the clarification questions:
 
 - Update the profile with confirmed facts.
-- Generate the CV in LaTeX using `python scripts/render_latex.py --profile data/profile.json --output output/cv.tex`.
+- Confirm that required contact fields are present and that no open question is being represented as a candidate fact. If contact details remain `unknown` or skipped, state that the CV is incomplete before offering final materials.
+- Validate the profile, then generate the CV in LaTeX using `python scripts/render_latex.py --profile data/profile.json --output output/cv.tex`.
+- Before accepting the output, inspect `output/cv.tex` for the candidate name, contact line, experience, education, skills, and projects. Confirm that every populated profile field used by the renderer appears or is intentionally omitted; a successful script exit alone is not enough.
 - Keep wording faithful to the confirmed data and tailor ordering and emphasis to the job description.
 - Generate a cover letter or interview preparation document only when explicitly requested.
+- Compile the LaTeX when a local compiler is available. If no compiler is installed, report that compilation and page-count verification could not be completed.
 - Before presenting output, run the script validation and report any omitted sections or unresolved questions.
 
 ## Data commands
