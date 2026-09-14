@@ -1,0 +1,7 @@
+# Candidate and job-post data may contain personal or confidential information.
+data/profile.json
+data/job-description.json
+data/application-draft.md
+output/
+__pycache__/
+*.py[cod]
